@@ -1,6 +1,6 @@
 <?php
 
-$botToken="XX3256069:AAFu8GSiSgNFfnW-6mer8ILx-SK6Ga9GlXX";
+$botToken="XXXX:XXXX";
 $website="https://api.telegram.org/bot".$botToken;
 
 $update=file_get_contents('php://input');
@@ -9,14 +9,38 @@ $update=json_decode($update,TRUE);
 $chatId=$update["message"]["chat"]["id"];
 $text=$update["message"]["text"];
 
-$text=strtoupper($text);
+$servername = "localhost";
+$username = "XXX";
+$password = "XXX";
+$dbname = "XXX";
 
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+} 
+
+$checkSql="select * from userProfile where chat_id='".$chatId."'";
+$result = $conn->query($checkSql);
+$row = $result->fetch_assoc();
+if($row==0){
+	$sql = "INSERT INTO userProfile (chat_id) VALUES ('".$chatId."')";
+	if ($conn->query($sql) === TRUE) {
+		//echo "New record created successfully";
+	} else {
+		//echo "Error: " . $sql . "<br>" . $conn->error;
+	}
+}
+
+$text=strtoupper($text);
+  
 include_once "simple_html_dom.php";
 
 switch ($text) {
     case "TOPICS":
 		file_get_contents($website."/sendmessage?chat_id=".$chatId."&text=current,warning");
-		break;
+        break;
     case "TELLME CURRENT":
 		$html = file_get_html('http://rss.weather.gov.hk/rss/CurrentWeather.xml');
 		$e = $html->find('description', 1);
@@ -40,10 +64,20 @@ switch ($text) {
 		}
 		else{
 			file_get_contents($website."/sendmessage?chat_id=".$chatId."&text=".$warningmsg);
-
 		}
-        break;
+    break;
+	case  "SUBSCRIBE WARNING":
+		$subscribeSql="update userProfile set subscribe='Y' where chat_id='".$chatId."'";
+		$conn->query($subscribeSql);
+		file_get_contents($website."/sendmessage?chat_id=".$chatId."&text=OK");
+		break;
+	case  "UNSUBSCRIBE WARNING":
+		$unsubscribeSql="update userProfile set subscribe='' where chat_id='".$chatId."'";
+		$conn->query($unsubscribeSql);
+		file_get_contents($website."/sendmessage?chat_id=".$chatId."&text=OK");
+		break;
     default:
 		file_get_contents($website."/sendmessage?chat_id=".$chatId."&text=invaild command");
-}
+	}
+$conn->close();
 ?>
